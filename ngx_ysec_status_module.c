@@ -56,28 +56,28 @@ static ngx_ysec_status_store_t *
 
 static ngx_command_t   ngx_ysec_status_commands[] = {
 
-    { ngx_string("req_status_zone"),
+    { ngx_string("ysec_status_zone"),
       NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE3,
       ngx_ysec_status_zone,
       0,
       0,
       NULL },
 
-    { ngx_string("req_status"),
+    { ngx_string("ysec_status"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
       ngx_http_reqstat,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
 
-    { ngx_string("req_status_bypass"),
+    { ngx_string("ysec_status_bypass"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
       ngx_http_set_predicate_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_ysec_status_conf_t, bypass),
       NULL },
 
-    { ngx_string("req_status_show"),
+    { ngx_string("ysec_status_show"),
       NGX_HTTP_LOC_CONF|NGX_CONF_ANY,
       ngx_ysec_status_show,
       NGX_HTTP_LOC_CONF_OFFSET,
