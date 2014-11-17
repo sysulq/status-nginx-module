@@ -1,0 +1,70 @@
+diff --git i/src/core/ngx_connection.h w/src/core/ngx_connection.h
+index ed14e60..5a2b315 100644
+--- i/src/core/ngx_connection.h
++++ w/src/core/ngx_connection.h
+@@ -130,6 +130,7 @@ struct ngx_connection_s {
+     ngx_listening_t    *listening;
+ 
+     off_t               sent;
++    off_t               received;
+ 
+     ngx_log_t          *log;
+ 
+diff --git i/src/http/ngx_http_request.c w/src/http/ngx_http_request.c
+index 845ada3..020889d 100644
+--- i/src/http/ngx_http_request.c
++++ w/src/http/ngx_http_request.c
+@@ -463,6 +463,7 @@ ngx_http_wait_request_handler(ngx_event_t *rev)
+     }
+ 
+     b->last += n;
++    c->received += n;
+ 
+     if (hc->proxy_protocol) {
+         hc->proxy_protocol = 0;
+@@ -1406,6 +1407,7 @@ ngx_http_read_request_header(ngx_http_request_t *r)
+     }
+ 
+     r->header_in->last += n;
++    c->received += n;
+ 
+     return n;
+ }
+@@ -2920,6 +2922,7 @@ ngx_http_set_keepalive(ngx_http_request_t *r)
+         c->data = r;
+ 
+         c->sent = 0;
++        c->received = 0;
+         c->destroyed = 0;
+ 
+         if (rev->timer_set) {
+@@ -3159,6 +3162,7 @@ ngx_http_keepalive_handler(ngx_event_t *rev)
+     }
+ 
+     b->last += n;
++    c->received += n;
+ 
+     c->log->handler = ngx_http_log_error;
+     c->log->action = "reading client request line";
+@@ -3264,6 +3268,8 @@ ngx_http_lingering_close_handler(ngx_event_t *rev)
+             return;
+         }
+ 
++        c->received += n;
++
+     } while (rev->ready);
+ 
+     if (ngx_handle_read_event(rev, 0) != NGX_OK) {
+diff --git i/src/http/ngx_http_request_body.c w/src/http/ngx_http_request_body.c
+index bbf16fd..89e5230 100644
+--- i/src/http/ngx_http_request_body.c
++++ w/src/http/ngx_http_request_body.c
+@@ -328,6 +328,8 @@ ngx_http_do_read_client_request_body(ngx_http_request_t *r)
+             rb->buf->last += n;
+             r->request_length += n;
+ 
++            c->received += n;
++
+             if (n == rest) {
+                 /* pass buffer to request body filter chain */
+ 
