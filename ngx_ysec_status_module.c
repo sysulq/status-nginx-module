@@ -52,6 +52,11 @@ static void ngx_ysec_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
 static ngx_ysec_status_store_t *
     ngx_ysec_status_create_store(ngx_http_request_t *r,
     ngx_ysec_status_conf_t *slcf);
+static ngx_int_t
+    ngx_ysec_status_add_variables(ngx_conf_t *cf);
+static ngx_int_t
+    ngx_ysec_status_upstream_first_addr_variable(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data);
 
 
 static ngx_command_t   ngx_ysec_status_commands[] = {
@@ -89,7 +94,7 @@ static ngx_command_t   ngx_ysec_status_commands[] = {
 
 
 static ngx_http_module_t  ngx_ysec_status_module_ctx = {
-    NULL,                                  /* preconfiguration */
+    ngx_ysec_status_add_variables,        /* preconfiguration */
     ngx_ysec_status_init,                 /* postconfiguration */
 
     ngx_ysec_status_create_main_conf,     /* create main configuration */
@@ -116,6 +121,15 @@ ngx_module_t  ngx_ysec_status_module = {
     NULL,                                  /* exit process */
     NULL,                                  /* exit master */
     NGX_MODULE_V1_PADDING
+};
+
+static ngx_http_variable_t  ngx_ysec_status_vars[] = {
+
+    { ngx_string("upstream_first_addr"), NULL,
+      ngx_ysec_status_upstream_first_addr_variable, 0,
+      NGX_HTTP_VAR_NOCACHEABLE, 0 },
+
+    { ngx_null_string, NULL, NULL, 0, 0, 0 }
 };
 
 
@@ -808,5 +822,55 @@ ngx_ysec_status_create_store(ngx_http_request_t *r,
     }
 
     return store;
+}
+
+static ngx_int_t
+ngx_ysec_status_add_variables(ngx_conf_t *cf)
+{
+    ngx_http_variable_t *var, *v;
+
+    for (v = ngx_ysec_status_vars; v->name.len != 0; v++) {
+        var = ngx_http_add_variable(cf, &v->name, v->flags);
+        if (var == NULL) {
+            return NGX_ERROR;
+        }
+
+        var->get_handler = v->get_handler;
+        var->flags = v->flags;
+    }
+    
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_ysec_status_upstream_first_addr_variable(ngx_http_request_t *r,
+    ngx_http_variable_value_t *v, uintptr_t data)
+{
+    ngx_uint_t                  i;
+    ngx_http_upstream_state_t  *state;
+
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
+
+    if (r->upstream_states == NULL || r->upstream_states->nelts == 0) {
+        v->not_found = 1;
+        return NGX_OK;
+    }
+
+    state = r->upstream_states->elts;
+
+    for (i = 0; i < r->upstream_states->nelts; i++) {
+        if (state[i].peer) {
+            v->not_found = 0;
+            v->len = state[i].peer->len;
+            v->data = state[i].peer->data;
+            break;
+        } else {
+            v->not_found = 1;
+        }
+    }
+
+    return NGX_OK;
 }
 
