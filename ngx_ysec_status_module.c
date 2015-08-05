@@ -1,12 +1,9 @@
 #include <ngx_ysec_status.h>
 
 typedef struct {
-    ngx_uint_t                   recv;
-    ngx_uint_t                   sent;
     ngx_array_t                  monitor_index;
     ngx_flag_t                   bypass;
 } ngx_ysec_status_store_t;
-
 
 off_t  ngx_ysec_status_fields[13] = {
     NGX_YSEC_STATUS_BYTES_IN,
@@ -414,11 +411,9 @@ ngx_ysec_status_log_handler(ngx_http_request_t *r)
 
         ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_REQ_TOTAL, 1);
         ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_BYTES_IN,
-                               r->connection->received
-                                    - (store ? store->recv : 0));
+                               r->request_length);
         ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_BYTES_OUT,
-                               r->connection->sent
-                                    - (store ? store->sent : 0));
+                               r->connection->sent);
 
         if (r->err_status) {
             status = r->err_status;
@@ -838,7 +833,7 @@ ngx_ysec_status_add_variables(ngx_conf_t *cf)
         var->get_handler = v->get_handler;
         var->flags = v->flags;
     }
-    
+
     return NGX_OK;
 }
 
@@ -873,4 +868,3 @@ ngx_ysec_status_upstream_first_addr_variable(ngx_http_request_t *r,
 
     return NGX_OK;
 }
-
