@@ -26,14 +26,14 @@ Example
 
 ```
 http {
-    ysec_status_zone host "$host,$server_addr:$server_port" 10M;
+    http_status_zone host "$host,$server_addr:$server_port" 10M;
 
     server {
         location /us {
-            ysec_status_show;
+            http_status_show;
         }
 
-        ysec_status host;
+        http_status host;
     }
 }
 ```
@@ -58,5 +58,3 @@ localhost,127.0.0.1:80,162,6242,1,1,1,0,0,0,0,10,1,10,1
   * upstream_req total number of requests calling for upstream
   * upstream_rt accumulation or upstream rt
   * upstream_tries total number of times calling for upstream
-
-
