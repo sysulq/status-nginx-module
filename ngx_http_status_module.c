@@ -1,87 +1,87 @@
-#include <ngx_ysec_status.h>
+#include <ngx_http_status.h>
 
 typedef struct {
     ngx_array_t                  monitor_index;
     ngx_flag_t                   bypass;
-} ngx_ysec_status_store_t;
+} ngx_http_status_store_t;
 
-off_t  ngx_ysec_status_fields[13] = {
-    NGX_YSEC_STATUS_BYTES_IN,
-    NGX_YSEC_STATUS_BYTES_OUT,
-    NGX_YSEC_STATUS_CONN_TOTAL,
-    NGX_YSEC_STATUS_REQ_TOTAL,
-    NGX_YSEC_STATUS_2XX,
-    NGX_YSEC_STATUS_3XX,
-    NGX_YSEC_STATUS_4XX,
-    NGX_YSEC_STATUS_5XX,
-    NGX_YSEC_STATUS_OTHER_STATUS,
-    NGX_YSEC_STATUS_RT,
-    NGX_YSEC_STATUS_UPS_REQ,
-    NGX_YSEC_STATUS_UPS_RT,
-    NGX_YSEC_STATUS_UPS_TRIES
+off_t  ngx_http_status_fields[13] = {
+    NGX_HTTP_STATUS_BYTES_IN,
+    NGX_HTTP_STATUS_BYTES_OUT,
+    NGX_HTTP_STATUS_CONN_TOTAL,
+    NGX_HTTP_STATUS_REQ_TOTAL,
+    NGX_HTTP_STATUS_2XX,
+    NGX_HTTP_STATUS_3XX,
+    NGX_HTTP_STATUS_4XX,
+    NGX_HTTP_STATUS_5XX,
+    NGX_HTTP_STATUS_OTHER_STATUS,
+    NGX_HTTP_STATUS_RT,
+    NGX_HTTP_STATUS_UPS_REQ,
+    NGX_HTTP_STATUS_UPS_RT,
+    NGX_HTTP_STATUS_UPS_TRIES
 };
 
 
-static void *ngx_ysec_status_create_main_conf(ngx_conf_t *cf);
-static void *ngx_ysec_status_create_loc_conf(ngx_conf_t *cf);
-static char *ngx_ysec_status_merge_loc_conf(ngx_conf_t *cf, void *parent,
+static void *ngx_http_status_create_main_conf(ngx_conf_t *cf);
+static void *ngx_http_status_create_loc_conf(ngx_conf_t *cf);
+static char *ngx_http_status_merge_loc_conf(ngx_conf_t *cf, void *parent,
     void *child);
-static ngx_int_t ngx_ysec_status_init(ngx_conf_t *cf);
-static char *ngx_ysec_status_show(ngx_conf_t *cf, ngx_command_t *cmd,
+static ngx_int_t ngx_http_status_init(ngx_conf_t *cf);
+static char *ngx_http_status_show(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-static char *ngx_ysec_status_zone(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_http_status_zone(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_reqstat(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
-static void ngx_ysec_status_count(void *data, off_t offset,
+static void ngx_http_status_count(void *data, off_t offset,
     ngx_int_t incr);
-static ngx_int_t ngx_ysec_status_init_zone(ngx_shm_zone_t *shm_zone,
+static ngx_int_t ngx_http_status_init_zone(ngx_shm_zone_t *shm_zone,
     void *data);
 
-static ngx_int_t ngx_ysec_status_log_handler(ngx_http_request_t *r);
-static ngx_int_t ngx_ysec_status_show_handler(ngx_http_request_t *r);
+static ngx_int_t ngx_http_status_log_handler(ngx_http_request_t *r);
+static ngx_int_t ngx_http_status_show_handler(ngx_http_request_t *r);
 
-static ngx_ysec_status_rbnode_t *
-    ngx_ysec_status_rbtree_lookup(ngx_shm_zone_t *shm_zone,
+static ngx_http_status_rbnode_t *
+    ngx_http_status_rbtree_lookup(ngx_shm_zone_t *shm_zone,
     ngx_str_t *val);
-static void ngx_ysec_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
+static void ngx_http_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
     ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel);
-static ngx_ysec_status_store_t *
-    ngx_ysec_status_create_store(ngx_http_request_t *r,
-    ngx_ysec_status_conf_t *slcf);
+static ngx_http_status_store_t *
+    ngx_http_status_create_store(ngx_http_request_t *r,
+    ngx_http_status_conf_t *slcf);
 static ngx_int_t
-    ngx_ysec_status_add_variables(ngx_conf_t *cf);
+    ngx_http_status_add_variables(ngx_conf_t *cf);
 static ngx_int_t
-    ngx_ysec_status_upstream_first_addr_variable(ngx_http_request_t *r,
+    ngx_http_status_upstream_first_addr_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 
 
-static ngx_command_t   ngx_ysec_status_commands[] = {
+static ngx_command_t   ngx_http_status_commands[] = {
 
-    { ngx_string("ysec_status_zone"),
+    { ngx_string("http_status_zone"),
       NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE3,
-      ngx_ysec_status_zone,
+      ngx_http_status_zone,
       0,
       0,
       NULL },
 
-    { ngx_string("ysec_status"),
+    { ngx_string("http_status"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
       ngx_http_reqstat,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
 
-    { ngx_string("ysec_status_bypass"),
+    { ngx_string("http_status_bypass"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
       ngx_http_set_predicate_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_ysec_status_conf_t, bypass),
+      offsetof(ngx_http_status_conf_t, bypass),
       NULL },
 
-    { ngx_string("ysec_status_show"),
+    { ngx_string("http_status_show"),
       NGX_HTTP_LOC_CONF|NGX_CONF_ANY,
-      ngx_ysec_status_show,
+      ngx_http_status_show,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
@@ -90,25 +90,25 @@ static ngx_command_t   ngx_ysec_status_commands[] = {
 };
 
 
-static ngx_http_module_t  ngx_ysec_status_module_ctx = {
-    ngx_ysec_status_add_variables,        /* preconfiguration */
-    ngx_ysec_status_init,                 /* postconfiguration */
+static ngx_http_module_t  ngx_http_status_module_ctx = {
+    ngx_http_status_add_variables,        /* preconfiguration */
+    ngx_http_status_init,                 /* postconfiguration */
 
-    ngx_ysec_status_create_main_conf,     /* create main configuration */
+    ngx_http_status_create_main_conf,     /* create main configuration */
     NULL,                                  /* init main configuration */
 
     NULL,                                  /* create server configuration */
     NULL,                                  /* merge server configuration */
 
-    ngx_ysec_status_create_loc_conf,      /* create location configuration */
-    ngx_ysec_status_merge_loc_conf        /* merge location configuration */
+    ngx_http_status_create_loc_conf,      /* create location configuration */
+    ngx_http_status_merge_loc_conf        /* merge location configuration */
 };
 
 
-ngx_module_t  ngx_ysec_status_module = {
+ngx_module_t  ngx_http_status_module = {
     NGX_MODULE_V1,
-    &ngx_ysec_status_module_ctx,          /* module context */
-    ngx_ysec_status_commands,             /* module directives */
+    &ngx_http_status_module_ctx,          /* module context */
+    ngx_http_status_commands,             /* module directives */
     NGX_HTTP_MODULE,                       /* module type */
     NULL,                                  /* init master */
     NULL,                                  /* init module */
@@ -120,10 +120,10 @@ ngx_module_t  ngx_ysec_status_module = {
     NGX_MODULE_V1_PADDING
 };
 
-static ngx_http_variable_t  ngx_ysec_status_vars[] = {
+static ngx_http_variable_t  ngx_http_status_vars[] = {
 
     { ngx_string("upstream_first_addr"), NULL,
-      ngx_ysec_status_upstream_first_addr_variable, 0,
+      ngx_http_status_upstream_first_addr_variable, 0,
       NGX_HTTP_VAR_NOCACHEABLE, 0 },
 
     { ngx_null_string, NULL, NULL, 0, 0, 0 }
@@ -131,18 +131,18 @@ static ngx_http_variable_t  ngx_ysec_status_vars[] = {
 
 
 static void *
-ngx_ysec_status_create_main_conf(ngx_conf_t *cf)
+ngx_http_status_create_main_conf(ngx_conf_t *cf)
 {
-    return ngx_pcalloc(cf->pool, sizeof(ngx_ysec_status_conf_t));
+    return ngx_pcalloc(cf->pool, sizeof(ngx_http_status_conf_t));
 }
 
 
 static void *
-ngx_ysec_status_create_loc_conf(ngx_conf_t *cf)
+ngx_http_status_create_loc_conf(ngx_conf_t *cf)
 {
-    ngx_ysec_status_conf_t      *conf;
+    ngx_http_status_conf_t      *conf;
 
-    conf = ngx_palloc(cf->pool, sizeof(ngx_ysec_status_conf_t));
+    conf = ngx_palloc(cf->pool, sizeof(ngx_http_status_conf_t));
     if (conf == NULL) {
         return NULL;
     }
@@ -156,11 +156,11 @@ ngx_ysec_status_create_loc_conf(ngx_conf_t *cf)
 
 
 static char *
-ngx_ysec_status_merge_loc_conf(ngx_conf_t *cf, void *parent,
+ngx_http_status_merge_loc_conf(ngx_conf_t *cf, void *parent,
     void *child)
 {
-    ngx_ysec_status_conf_t      *conf = child;
-    ngx_ysec_status_conf_t      *prev = parent;
+    ngx_http_status_conf_t      *conf = child;
+    ngx_http_status_conf_t      *prev = parent;
 
     ngx_conf_merge_ptr_value(conf->bypass, prev->bypass, NULL);
     ngx_conf_merge_ptr_value(conf->monitor, prev->monitor, NULL);
@@ -171,7 +171,7 @@ ngx_ysec_status_merge_loc_conf(ngx_conf_t *cf, void *parent,
 
 
 static ngx_int_t
-ngx_ysec_status_init(ngx_conf_t *cf)
+ngx_http_status_init(ngx_conf_t *cf)
 {
     ngx_http_handler_pt          *h;
     ngx_http_core_main_conf_t    *cmcf;
@@ -183,7 +183,7 @@ ngx_ysec_status_init(ngx_conf_t *cf)
         return NGX_ERROR;
     }
 
-    *h = ngx_ysec_status_log_handler;
+    *h = ngx_http_status_log_handler;
 
 
     return NGX_OK;
@@ -191,14 +191,14 @@ ngx_ysec_status_init(ngx_conf_t *cf)
 
 
 static char *
-ngx_ysec_status_show(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_status_show(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_str_t                    *value;
     ngx_uint_t                    i;
     ngx_shm_zone_t               *shm_zone, **z;
     ngx_http_core_loc_conf_t     *clcf;
 
-    ngx_ysec_status_conf_t      *slcf = conf;
+    ngx_http_status_conf_t      *slcf = conf;
 
     value = cf->args->elts;
 
@@ -219,7 +219,7 @@ ngx_ysec_status_show(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     for (i = 1; i < cf->args->nelts; i++) {
         shm_zone = ngx_shared_memory_add(cf, &value[i], 0,
-                                         &ngx_ysec_status_module);
+                                         &ngx_http_status_module);
         if (shm_zone == NULL) {
             return NGX_CONF_ERROR;
         }
@@ -231,19 +231,19 @@ ngx_ysec_status_show(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 reg_handler:
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
-    clcf->handler = ngx_ysec_status_show_handler;
+    clcf->handler = ngx_http_status_show_handler;
 
     return NGX_CONF_OK;
 }
 
 
 static char *
-ngx_ysec_status_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_status_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ssize_t                            size;
     ngx_str_t                         *value;
     ngx_shm_zone_t                    *shm_zone;
-    ngx_ysec_status_ctx_t            *ctx;
+    ngx_http_status_ctx_t            *ctx;
     ngx_http_compile_complex_value_t   ccv;
 
     value = cf->args->elts;
@@ -261,7 +261,7 @@ ngx_ysec_status_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_ysec_status_ctx_t));
+    ctx = ngx_pcalloc(cf->pool, sizeof(ngx_http_status_ctx_t));
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -290,7 +290,7 @@ ngx_ysec_status_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     *ctx->val = value[2];
 
     shm_zone = ngx_shared_memory_add(cf, &value[1], size,
-                                     &ngx_ysec_status_module);
+                                     &ngx_http_status_module);
     if (shm_zone == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -304,7 +304,7 @@ ngx_ysec_status_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    shm_zone->init = ngx_ysec_status_init_zone;
+    shm_zone->init = ngx_http_status_init_zone;
     shm_zone->data = ctx;
 
     return NGX_CONF_OK;
@@ -317,12 +317,12 @@ ngx_http_reqstat(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_str_t                    *value;
     ngx_uint_t                    i, j;
     ngx_shm_zone_t               *shm_zone, **z;
-    ngx_ysec_status_conf_t      *smcf;
+    ngx_http_status_conf_t      *smcf;
 
-    ngx_ysec_status_conf_t      *slcf = conf;
+    ngx_http_status_conf_t      *slcf = conf;
 
     value = cf->args->elts;
-    smcf = ngx_http_conf_get_module_main_conf(cf, ngx_ysec_status_module);
+    smcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_status_module);
 
     if (slcf->monitor != NGX_CONF_UNSET_PTR) {
         return "is duplicate";
@@ -344,7 +344,7 @@ ngx_http_reqstat(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     for (i = 1; i < cf->args->nelts; i++) {
         shm_zone = ngx_shared_memory_add(cf, &value[i], 0,
-                                         &ngx_ysec_status_module);
+                                         &ngx_http_status_module);
         if (shm_zone == NULL) {
             return NGX_CONF_ERROR;
         }
@@ -373,26 +373,26 @@ ngx_http_reqstat(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static ngx_int_t
-ngx_ysec_status_log_handler(ngx_http_request_t *r)
+ngx_http_status_log_handler(ngx_http_request_t *r)
 {
     ngx_uint_t                    i, j, status, utries;
     ngx_time_t                   *tp;
     ngx_msec_int_t                ms, total_ms;
-    ngx_ysec_status_conf_t      *slcf;
-    ngx_ysec_status_rbnode_t    *fnode, **fnode_store;
+    ngx_http_status_conf_t      *slcf;
+    ngx_http_status_rbnode_t    *fnode, **fnode_store;
     ngx_http_upstream_state_t    *state;
-    ngx_ysec_status_store_t     *store;
+    ngx_http_status_store_t     *store;
 
-    slcf = ngx_http_get_module_loc_conf(r, ngx_ysec_status_module);
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_status_module);
 
     if (slcf->monitor == NULL) {
         return NGX_OK;
     }
 
-    store = ngx_http_get_module_ctx(r, ngx_ysec_status_module);
+    store = ngx_http_get_module_ctx(r, ngx_http_status_module);
 
     if (store == NULL) {
-        store = ngx_ysec_status_create_store(r, slcf);
+        store = ngx_http_status_create_store(r, slcf);
         if (store == NULL) {
             return NGX_ERROR;
         }
@@ -406,13 +406,13 @@ ngx_ysec_status_log_handler(ngx_http_request_t *r)
     for (i = 0; i < store->monitor_index.nelts; i++) {
         fnode = fnode_store[i];
         if (r->connection->requests == 1) {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_CONN_TOTAL, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_CONN_TOTAL, 1);
         }
 
-        ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_REQ_TOTAL, 1);
-        ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_BYTES_IN,
+        ngx_http_status_count(fnode, NGX_HTTP_STATUS_REQ_TOTAL, 1);
+        ngx_http_status_count(fnode, NGX_HTTP_STATUS_BYTES_IN,
                                r->request_length);
-        ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_BYTES_OUT,
+        ngx_http_status_count(fnode, NGX_HTTP_STATUS_BYTES_OUT,
                                r->connection->sent);
 
         if (r->err_status) {
@@ -429,19 +429,19 @@ ngx_ysec_status_log_handler(ngx_http_request_t *r)
         }
 
         if (status >= 200 && status < 300) {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_2XX, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_2XX, 1);
 
         } else if (status >= 300 && status < 400) {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_3XX, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_3XX, 1);
 
         } else if (status >= 400 && status < 500) {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_4XX, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_4XX, 1);
 
         } else if (status >= 500 && status < 600) {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_5XX, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_5XX, 1);
 
         } else {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_OTHER_STATUS, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_OTHER_STATUS, 1);
         }
 
         tp = ngx_timeofday();
@@ -449,10 +449,10 @@ ngx_ysec_status_log_handler(ngx_http_request_t *r)
         ms = (ngx_msec_int_t)
              ((tp->sec - r->start_sec) * 1000 + (tp->msec - r->start_msec));
         ms = ngx_max(ms, 0);
-        ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_RT, ms);
+        ngx_http_status_count(fnode, NGX_HTTP_STATUS_RT, ms);
 
         if (r->upstream_states != NULL && r->upstream_states->nelts > 0) {
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_UPS_REQ, 1);
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_UPS_REQ, 1);
 
             j = 0;
             total_ms = 0;
@@ -479,9 +479,9 @@ ngx_ysec_status_log_handler(ngx_http_request_t *r)
                 }
             }
 
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_UPS_RT,
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_UPS_RT,
                                    total_ms);
-            ngx_ysec_status_count(fnode, NGX_YSEC_STATUS_UPS_TRIES,
+            ngx_http_status_count(fnode, NGX_HTTP_STATUS_UPS_TRIES,
                                    utries);
         }
     }
@@ -491,7 +491,7 @@ ngx_ysec_status_log_handler(ngx_http_request_t *r)
 
 
 static ngx_int_t
-ngx_ysec_status_show_handler(ngx_http_request_t *r)
+ngx_http_status_show_handler(ngx_http_request_t *r)
 {
     ngx_int_t                     rc;
     ngx_buf_t                    *b;
@@ -500,13 +500,13 @@ ngx_ysec_status_show_handler(ngx_http_request_t *r)
     ngx_chain_t                  *tl, *free, *busy;
     ngx_queue_t                  *q;
     ngx_shm_zone_t              **shm_zone;
-    ngx_ysec_status_ctx_t       *ctx;
-    ngx_ysec_status_conf_t      *slcf;
-    ngx_ysec_status_conf_t      *smcf;
-    ngx_ysec_status_rbnode_t    *node;
+    ngx_http_status_ctx_t       *ctx;
+    ngx_http_status_conf_t      *slcf;
+    ngx_http_status_conf_t      *smcf;
+    ngx_http_status_rbnode_t    *node;
 
-    slcf = ngx_http_get_module_loc_conf(r, ngx_ysec_status_module);
-    smcf = ngx_http_get_module_main_conf(r, ngx_ysec_status_module);
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_status_module);
+    smcf = ngx_http_get_module_main_conf(r, ngx_http_status_module);
 
     display = slcf->display == NULL ? smcf->monitor : slcf->display;
     if (display == NULL) {
@@ -532,7 +532,7 @@ ngx_ysec_status_show_handler(ngx_http_request_t *r)
              q != ngx_queue_sentinel(&ctx->sh->queue);
              q = ngx_queue_next(q))
         {
-            node = ngx_queue_data(q, ngx_ysec_status_rbnode_t, queue);
+            node = ngx_queue_data(q, ngx_http_status_rbnode_t, queue);
 
             tl = ngx_chain_get_free_buf(r->pool, &free);
             if (tl == NULL) {
@@ -557,12 +557,12 @@ ngx_ysec_status_show_handler(ngx_http_request_t *r)
                                    (size_t) node->len, node->data);
 
             for (j = 0;
-                 j < sizeof(ngx_ysec_status_fields) / sizeof(off_t);
+                 j < sizeof(ngx_http_status_fields) / sizeof(off_t);
                  j++)
             {
                 b->last = ngx_slprintf(b->last, b->end, "%uA,",
                                        *REQ_FIELD(node,
-                                                  ngx_ysec_status_fields[j]));
+                                                  ngx_http_status_fields[j]));
             }
 
             *(b->last - 1) = '\n';
@@ -573,10 +573,10 @@ ngx_ysec_status_show_handler(ngx_http_request_t *r)
 
 #if nginx_version >= 1002000
             ngx_chain_update_chains(r->pool, &free, &busy, &tl,
-                                    (ngx_buf_tag_t) &ngx_ysec_status_module);
+                                    (ngx_buf_tag_t) &ngx_http_status_module);
 #else
             ngx_chain_update_chains(&free, &busy, &tl,
-                                    (ngx_buf_tag_t) &ngx_ysec_status_module);
+                                    (ngx_buf_tag_t) &ngx_http_status_module);
 #endif
         }
     }
@@ -594,23 +594,23 @@ ngx_ysec_status_show_handler(ngx_http_request_t *r)
 
 
 void
-ngx_ysec_status_count(void *data, off_t offset, ngx_int_t incr)
+ngx_http_status_count(void *data, off_t offset, ngx_int_t incr)
 {
-    ngx_ysec_status_rbnode_t    *node = data;
+    ngx_http_status_rbnode_t    *node = data;
 
     (void) ngx_atomic_fetch_add(REQ_FIELD(node, offset), incr);
 }
 
 
-static ngx_ysec_status_rbnode_t *
-ngx_ysec_status_rbtree_lookup(ngx_shm_zone_t *shm_zone, ngx_str_t *val)
+static ngx_http_status_rbnode_t *
+ngx_http_status_rbtree_lookup(ngx_shm_zone_t *shm_zone, ngx_str_t *val)
 {
     size_t                        size;
     uint32_t                      hash;
     ngx_int_t                     rc;
     ngx_rbtree_node_t            *node, *sentinel;
-    ngx_ysec_status_ctx_t       *ctx;
-    ngx_ysec_status_rbnode_t    *rs;
+    ngx_http_status_ctx_t       *ctx;
+    ngx_http_status_rbnode_t    *rs;
 
     ctx = shm_zone->data;
 
@@ -634,7 +634,7 @@ ngx_ysec_status_rbtree_lookup(ngx_shm_zone_t *shm_zone, ngx_str_t *val)
 
         /* hash == node->key */
 
-        rs = (ngx_ysec_status_rbnode_t *) &node->color;
+        rs = (ngx_http_status_rbnode_t *) &node->color;
 
         rc = ngx_memn2cmp(val->data, rs->data, val->len, (size_t) rs->len);
 
@@ -647,7 +647,7 @@ ngx_ysec_status_rbtree_lookup(ngx_shm_zone_t *shm_zone, ngx_str_t *val)
     }
 
     size = offsetof(ngx_rbtree_node_t, color)
-         + offsetof(ngx_ysec_status_rbnode_t, data)
+         + offsetof(ngx_http_status_rbnode_t, data)
          + val->len;
 
     node = ngx_slab_alloc_locked(ctx->shpool, size);
@@ -658,7 +658,7 @@ ngx_ysec_status_rbtree_lookup(ngx_shm_zone_t *shm_zone, ngx_str_t *val)
 
     node->key = hash;
 
-    rs = (ngx_ysec_status_rbnode_t *) &node->color;
+    rs = (ngx_http_status_rbnode_t *) &node->color;
 
     rs->len = val->len;
 
@@ -675,9 +675,9 @@ ngx_ysec_status_rbtree_lookup(ngx_shm_zone_t *shm_zone, ngx_str_t *val)
 
 
 static ngx_int_t
-ngx_ysec_status_init_zone(ngx_shm_zone_t *shm_zone, void *data)
+ngx_http_status_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 {
-    ngx_ysec_status_ctx_t       *ctx, *octx;
+    ngx_http_status_ctx_t       *ctx, *octx;
 
     octx = data;
     ctx = shm_zone->data;
@@ -699,7 +699,7 @@ ngx_ysec_status_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 
     ctx->shpool = (ngx_slab_pool_t *) shm_zone->shm.addr;
 
-    ctx->sh = ngx_slab_alloc(ctx->shpool, sizeof(ngx_ysec_status_shctx_t));
+    ctx->sh = ngx_slab_alloc(ctx->shpool, sizeof(ngx_http_status_shctx_t));
     if (ctx->sh == NULL) {
         return NGX_ERROR;
     }
@@ -707,7 +707,7 @@ ngx_ysec_status_init_zone(ngx_shm_zone_t *shm_zone, void *data)
     ctx->shpool->data = ctx->sh;
 
     ngx_rbtree_init(&ctx->sh->rbtree, &ctx->sh->sentinel,
-                    ngx_ysec_status_rbtree_insert_value);
+                    ngx_http_status_rbtree_insert_value);
 
     ngx_queue_init(&ctx->sh->queue);
 
@@ -716,11 +716,11 @@ ngx_ysec_status_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 
 
 static void
-ngx_ysec_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
+ngx_http_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
     ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel)
 {
     ngx_rbtree_node_t          **p;
-    ngx_ysec_status_rbnode_t   *rsn, *rsnt;
+    ngx_http_status_rbnode_t   *rsn, *rsnt;
 
     for ( ;; ) {
 
@@ -734,8 +734,8 @@ ngx_ysec_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
 
         } else { /* node->key == temp->key */
 
-            rsn = (ngx_ysec_status_rbnode_t *) &node->color;
-            rsnt = (ngx_ysec_status_rbnode_t *) &temp->color;
+            rsn = (ngx_http_status_rbnode_t *) &node->color;
+            rsnt = (ngx_http_status_rbnode_t *) &temp->color;
 
             p = (ngx_memn2cmp(rsn->data, rsnt->data, rsn->len, rsnt->len) < 0)
                 ? &temp->left : &temp->right;
@@ -756,18 +756,18 @@ ngx_ysec_status_rbtree_insert_value(ngx_rbtree_node_t *temp,
 }
 
 
-static ngx_ysec_status_store_t *
-ngx_ysec_status_create_store(ngx_http_request_t *r,
-    ngx_ysec_status_conf_t *slcf)
+static ngx_http_status_store_t *
+ngx_http_status_create_store(ngx_http_request_t *r,
+    ngx_http_status_conf_t *slcf)
 {
     ngx_str_t                     val;
     ngx_uint_t                    i;
     ngx_shm_zone_t              **shm_zone, *z;
-    ngx_ysec_status_ctx_t       *ctx;
-    ngx_ysec_status_store_t     *store;
-    ngx_ysec_status_rbnode_t    *fnode, **fnode_store;
+    ngx_http_status_ctx_t       *ctx;
+    ngx_http_status_store_t     *store;
+    ngx_http_status_rbnode_t    *fnode, **fnode_store;
 
-    store = ngx_pcalloc(r->pool, sizeof(ngx_ysec_status_store_t));
+    store = ngx_pcalloc(r->pool, sizeof(ngx_http_status_store_t));
     if (store == NULL) {
         return NULL;
     }
@@ -786,7 +786,7 @@ ngx_ysec_status_create_store(ngx_http_request_t *r,
     }
 
     if (ngx_array_init(&store->monitor_index, r->pool, slcf->monitor->nelts,
-                       sizeof(ngx_ysec_status_rbnode_t *)) == NGX_ERROR)
+                       sizeof(ngx_http_status_rbnode_t *)) == NGX_ERROR)
     {
         return NULL;
     }
@@ -802,7 +802,7 @@ ngx_ysec_status_create_store(ngx_http_request_t *r,
             continue;
         }
 
-        fnode = ngx_ysec_status_rbtree_lookup(shm_zone[i], &val);
+        fnode = ngx_http_status_rbtree_lookup(shm_zone[i], &val);
 
         if (fnode == NULL) {
             ngx_log_error(NGX_LOG_WARN, r->connection->log, 0,
@@ -820,11 +820,11 @@ ngx_ysec_status_create_store(ngx_http_request_t *r,
 }
 
 static ngx_int_t
-ngx_ysec_status_add_variables(ngx_conf_t *cf)
+ngx_http_status_add_variables(ngx_conf_t *cf)
 {
     ngx_http_variable_t *var, *v;
 
-    for (v = ngx_ysec_status_vars; v->name.len != 0; v++) {
+    for (v = ngx_http_status_vars; v->name.len != 0; v++) {
         var = ngx_http_add_variable(cf, &v->name, v->flags);
         if (var == NULL) {
             return NGX_ERROR;
@@ -838,7 +838,7 @@ ngx_ysec_status_add_variables(ngx_conf_t *cf)
 }
 
 static ngx_int_t
-ngx_ysec_status_upstream_first_addr_variable(ngx_http_request_t *r,
+ngx_http_status_upstream_first_addr_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
     ngx_uint_t                  i;
