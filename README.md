@@ -1,5 +1,6 @@
 status-nginx-module
 ===================
+![](https://travis-ci.org/hnlq715/status-nginx-module.svg)
 
 The req status module for pure nginx.
 
