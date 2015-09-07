@@ -468,7 +468,7 @@ ngx_http_status_log_handler(ngx_http_request_t *r)
                                                + state[j].response_msec);
             #else
                 ms = (ngx_msec_int_t) (state[j].connect_time
-                     + state[j].header_time + state[j].response_msec);
+                     + state[j].header_time + state[j].response_time);
             #endif
 
                 ms = ngx_max(ms, 0);
