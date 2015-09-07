@@ -11,7 +11,9 @@ addons:
 
 env:
   matrix:
+    - VER_NGINX=1.6.3
     - VER_NGINX=1.8.0
+    - VER_NGINX=1.9.4
 
 install:
   - mkdir ./vendor && cd ./vendor
