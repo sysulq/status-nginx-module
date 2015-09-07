@@ -463,8 +463,14 @@ ngx_http_status_log_handler(ngx_http_request_t *r)
 
                 utries++;
 
+            #if (nginx_version < 1009001)
                 ms = (ngx_msec_int_t) (state[j].response_sec * 1000
                                                + state[j].response_msec);
+            #else
+                ms = (ngx_msec_int_t) (state[j].connect_time
+                     + state[j].header_time + state[j].response_msec);
+            #endif
+
                 ms = ngx_max(ms, 0);
                 total_ms += ms;
 
