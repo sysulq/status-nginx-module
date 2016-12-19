@@ -2,7 +2,7 @@ status-nginx-module
 ===================
 ![](https://travis-ci.org/hnlq715/status-nginx-module.svg)
 
-The req status module for pure nginx.
+The req status module for pure nginx. The core source file comes from Tengine, which is developed and maintained by Alibaba.
 
 Description
 ===========
